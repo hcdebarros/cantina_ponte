@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caixa — {{ store_name }}</title>
+<style>
+  :root {
+    --primary: #7c3aed;
+    --green: #10b981;
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --bg: #f3f4f6;
+    --card: #ffffff;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  header {
+    background: var(--primary);
+    color: white;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2);
+  }
+  header h1 { font-size: 1.3rem; }
+  header nav a {
+    color: rgba(255,255,255,.8);
+    text-decoration: none;
+    margin-left: 16px;
+    font-size: .9rem;
+    font-weight: 600;
+  }
+  header nav a:hover { color: white; }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+
+  /* ── search bar ── */
+  .search-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    align-items: center;
+  }
+  .search-bar input {
+    flex: 1;
+    padding: 12px 16px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .search-bar input:focus { border-color: var(--primary); }
+  .search-bar button {
+    padding: 12px 20px;
+    border-radius: 10px;
+    border: none;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: .9rem;
+  }
+  .btn-search { background: var(--primary); color: white; }
+  .btn-refresh { background: var(--border); color: var(--text); }
+
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .tab {
+    padding: 8px 20px;
+    border-radius: 99px;
+    border: 2px solid var(--border);
+    background: white;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: .85rem;
+    transition: all .2s;
+  }
+  .tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+  .tab:hover:not(.active) { border-color: var(--primary); color: var(--primary); }
+
+  .orders-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+  }
+
+  .order-card {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    border-left: 4px solid var(--primary);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .order-card.preparing { border-left-color: var(--amber); }
+  .order-card.completed { border-left-color: var(--green); opacity: .7; }
+  .order-card.cancelled { border-left-color: var(--red); opacity: .6; }
+
+  .order-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .order-customer { font-size: 1.2rem; font-weight: 700; }
+  .order-meta { font-size: .78rem; color: var(--muted); }
+  .order-id { font-size: .75rem; color: var(--muted); }
+
+  .status-badge {
+    padding: 3px 10px;
+    border-radius: 99px;
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .badge-open      { background: #ede9fe; color: var(--primary); }
+  .badge-preparing { background: #fef3c7; color: #92400e; }
+  .badge-completed { background: #d1fae5; color: #065f46; }
+  .badge-cancelled { background: #fee2e2; color: #991b1b; }
+
+  .order-items { font-size: .85rem; color: var(--muted); line-height: 1.8; }
+  .order-items span { display: block; }
+
+  .order-total {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--primary);
+    display: flex;
+    justify-content: space-between;
+    padding-top: 6px;
+    border-top: 1px solid var(--border);
+  }
+
+  .order-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .order-actions button {
+    flex: 1;
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 700;
+    font-size: .82rem;
+    cursor: pointer;
+    transition: opacity .15s;
+  }
+  .order-actions button:hover { opacity: .85; }
+  .btn-print    { background: var(--primary); color: white; }
+  .btn-prepare  { background: var(--amber); color: #1f2937; }
+  .btn-complete { background: var(--green); color: white; }
+  .btn-cancel   { background: #fee2e2; color: var(--red); }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 0;
+    color: var(--muted);
+    grid-column: 1/-1;
+  }
+  .empty-state .icon { font-size: 3rem; display: block; margin-bottom: 8px; }
+
+  /* print area */
+  @media print {
+    body * { display: none !important; }
+    #printArea, #printArea * { display: block !important; }
+    #printArea {
+      font-family: monospace;
+      font-size: 12px;
+      width: 280px;
+      margin: 0;
+      padding: 0;
+    }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>🏪 {{ store_name }} — Caixa</h1>
+  <nav>
+    <a href="/">Kiosk</a>
+    <a href="/admin">Admin</a>
+    <a href="/admin/history">Histórico</a>
+    <span id="clock" style="margin-left:16px; font-size:.85rem; opacity:.8"></span>
+  </nav>
+</header>
+
+<div class="container">
+
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="🔍 Buscar por nome do cliente..." oninput="scheduleSearch()">
+    <button class="btn-refresh" onclick="loadOrders()">↻ Atualizar</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('open', this)">🟣 Em Aberto</button>
+    <button class="tab" onclick="switchTab('preparing', this)">🔥 Em Preparo</button>
+    <button class="tab" onclick="switchTab('completed', this)">✅ Concluído</button>
+    <button class="tab" onclick="switchTab('cancelled', this)">❌ Cancelados</button>
+  </div>
+
+  <div class="orders-grid" id="ordersGrid">
+    <div class="empty-state"><span class="icon">⏳</span>Carregando pedidos...</div>
+  </div>
+</div>
+
+<!-- hidden print area -->
+<div id="printArea" style="display:none"></div>
+
+<script>
+let currentStatus = 'open';
+let searchTimer;
+
+// clock
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// auto-refresh every 15s nas abas ativas
+setInterval(() => { if (currentStatus === 'open' || currentStatus === 'preparing') loadOrders(); }, 15000);
+
+function switchTab(status, btn) {
+  currentStatus = status;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  loadOrders();
+}
+
+function scheduleSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(loadOrders, 400);
+}
+
+async function loadOrders() {
+  const q = document.getElementById('searchInput').value.trim();
+  const url = `/api/orders?status=${currentStatus}${q ? '&q=' + encodeURIComponent(q) : ''}`;
+  const res = await fetch(url);
+  const orders = await res.json();
+  renderOrders(orders);
+}
+
+function renderOrders(orders) {
+  const grid = document.getElementById('ordersGrid');
+  if (!orders.length) {
+    const emptyLabels = {open:'em aberto', preparing:'em preparo', completed:'concluído', cancelled:'cancelado'};
+  grid.innerHTML = `<div class="empty-state"><span class="icon">📭</span>Nenhum pedido ${emptyLabels[currentStatus] || currentStatus} encontrado.</div>`;
+    return;
+  }
+
+  grid.innerHTML = orders.map(o => {
+    const statusLabel = {open:'Em Aberto', preparing:'Em Preparo', completed:'Concluído', cancelled:'Cancelado'}[o.status];
+    const badgeClass  = {open:'badge-open', preparing:'badge-preparing', completed:'badge-completed', cancelled:'badge-cancelled'}[o.status];
+    const dt = new Date(o.created_at).toLocaleString('pt-BR', {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit'});
+    const itemsHtml = o.items.map(i =>
+      `<span>${i.quantity}× ${i.name} — R$ ${(i.price * i.quantity).toFixed(2).replace('.',',')}</span>`
+    ).join('');
+
+    const actions = o.status === 'open' ? `
+      <button class="btn-print"   onclick="printOrder(${o.id})">🖨 Imprimir</button>
+      <button class="btn-prepare" onclick="markAs(${o.id},'preparing')">🔥 Em Preparo</button>
+      <button class="btn-cancel"  onclick="markAs(${o.id},'cancelled')">✕ Cancelar</button>
+    ` : o.status === 'preparing' ? `
+      <button class="btn-print"    onclick="printOrder(${o.id})">🖨 Imprimir</button>
+      <button class="btn-complete" onclick="markAs(${o.id},'completed')">✅ Concluído</button>
+      <button class="btn-cancel"   onclick="markAs(${o.id},'cancelled')">✕ Cancelar</button>
+    ` : o.status === 'completed' ? `
+      <button class="btn-print" onclick="printOrder(${o.id})">🖨 Reimprimir</button>
+    ` : '';
+
+    return `
+      <div class="order-card ${o.status}" id="card-${o.id}">
+        <div class="order-header">
+          <div>
+            <div class="order-customer">${o.customer}</div>
+            <div class="order-meta">${dt}</div>
+            <div class="order-id">#${String(o.id).padStart(4,'0')}</div>
+          </div>
+          <span class="status-badge ${badgeClass}">${statusLabel}</span>
+        </div>
+        <div class="order-items">${itemsHtml}</div>
+        <div class="order-total">
+          <span>Total</span>
+          <span>R$ ${o.total.toFixed(2).replace('.',',')}</span>
+        </div>
+        ${actions ? `<div class="order-actions">${actions}</div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+async function markAs(orderId, status) {
+  const msgs = {
+    preparing: 'Mover pedido para Em Preparo?',
+    completed: 'Marcar pedido como Concluído?',
+    cancelled: 'Cancelar este pedido? O estoque será restaurado.'
+  };
+  if (!confirm(msgs[status] || 'Confirmar?')) return;
+  await fetch(`/api/orders/${orderId}/status`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ status })
+  });
+  loadOrders();
+}
+
+async function printOrder(orderId) {
+  const res = await fetch(`/api/orders/${orderId}`);
+  const o = await res.json();
+
+  // build receipt HTML for browser print
+  const storeName = '{{ store_name }}';
+  const dt = new Date(o.created_at).toLocaleString('pt-BR');
+  const itemsText = o.items.map(i =>
+    `${i.quantity}x ${i.name.padEnd(18,' ')} R$${(i.price * i.quantity).toFixed(2).replace('.',',')}`
+  ).join('\n');
+
+  const receipt = `
+    <div style="font-family:monospace;font-size:12px;width:280px;margin:0 auto;">
+      <div style="text-align:center;margin-bottom:8px;">
+        <strong>${storeName}</strong><br>
+        <span style="font-size:10px;">${dt}</span>
+      </div>
+      <div style="border-top:1px dashed #000;margin:6px 0;"></div>
+      <div>Pedido: #${String(o.id).padStart(4,'0')}</div>
+      <div>Cliente: <strong>${o.customer}</strong></div>
+      <div style="border-top:1px dashed #000;margin:6px 0;"></div>
+      <pre style="font-size:11px;white-space:pre-wrap;">${itemsText}</pre>
+      <div style="border-top:1px dashed #000;margin:6px 0;"></div>
+      <div style="display:flex;justify-content:space-between;">
+        <strong>TOTAL</strong>
+        <strong>R$ ${o.total.toFixed(2).replace('.',',')}</strong>
+      </div>
+      <div style="border-top:1px dashed #000;margin:6px 0;"></div>
+      <div style="text-align:center;font-size:10px;margin-top:8px;">
+        Obrigado! Deus abençoe!
+      </div>
+    </div>`;
+
+  document.getElementById('printArea').innerHTML = receipt;
+
+  // try thermal printer via /print endpoint, fallback to browser print
+  try {
+    const pRes = await fetch('/api/print', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ order_id: orderId })
+    });
+    if (!pRes.ok) throw new Error('no thermal');
+  } catch {
+    window.print();
+  }
+}
+
+// init
+loadOrders();
+</script>
+</body>
+</html>

@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — {{ store_name }}</title>
+<style>
+  :root {
+    --primary: #7c3aed;
+    --primary-dark: #5b21b6;
+    --green: #10b981;
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --bg: #f3f4f6;
+    --card: #ffffff;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); }
+
+  header {
+    background: var(--primary);
+    color: white;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  header h1 { font-size: 1.2rem; }
+  header nav a {
+    color: rgba(255,255,255,.8);
+    text-decoration: none;
+    margin-left: 14px;
+    font-size: .85rem;
+    font-weight: 600;
+  }
+  header nav a:hover { color: white; }
+  header nav a.logout { color: #fca5a5; }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+
+  /* ── stats ── */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.07);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .stat-card .label { font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .stat-card .value { font-size: 1.8rem; font-weight: 700; color: var(--primary); }
+  .stat-card .sub   { font-size: .82rem; color: var(--muted); }
+
+  /* ── sections ── */
+  .section { background: var(--card); border-radius: 14px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  .section-header h2 { font-size: 1rem; font-weight: 700; }
+
+  /* ── add product form ── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr auto;
+    gap: 10px;
+    align-items: end;
+  }
+  @media (max-width: 700px) { .form-grid { grid-template-columns: 1fr 1fr; } }
+
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group label { font-size: .78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; }
+  .form-group input, .form-group select {
+    padding: 9px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-size: .9rem;
+    outline: none;
+    width: 100%;
+    transition: border-color .2s;
+  }
+  .form-group input:focus, .form-group select:focus { border-color: var(--primary); }
+
+  .btn { padding: 9px 18px; border-radius: 8px; border: none; font-weight: 700; font-size: .85rem; cursor: pointer; }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-danger { background: #fee2e2; color: var(--red); }
+  .btn-sm { padding: 5px 10px; font-size: .78rem; }
+
+  /* ── products table ── */
+  table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+  th { text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--border); color: var(--muted); font-size: .75rem; text-transform: uppercase; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #faf9ff; }
+
+  .product-img {
+    width: 40px; height: 40px;
+    border-radius: 8px;
+    object-fit: cover;
+  }
+  .img-placeholder-sm {
+    width: 40px; height: 40px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem;
+  }
+
+  .stock-ok   { color: var(--green); font-weight: 700; }
+  .stock-low  { color: var(--amber); font-weight: 700; }
+  .stock-zero { color: var(--red);   font-weight: 700; }
+  .inactive   { opacity: .45; }
+
+  /* ── edit modal ── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.45);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: white;
+    border-radius: 16px;
+    padding: 28px;
+    width: 500px;
+    max-width: 95vw;
+    box-shadow: 0 20px 60px rgba(0,0,0,.2);
+  }
+  .modal h3 { margin-bottom: 16px; }
+  .modal-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end; }
+
+  /* ── settings ── */
+  .settings-form { display: flex; flex-direction: column; gap: 12px; }
+  .settings-form .row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+  .settings-form .row .form-group { flex: 1; min-width: 180px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚙️ Admin — {{ store_name }}</h1>
+  <nav>
+    <a href="/">Kiosk</a>
+    <a href="/caixa">Caixa</a>
+    <a href="/admin/history">Histórico</a>
+    <a href="/admin/logout" class="logout">Sair</a>
+  </nav>
+</header>
+
+<div class="container">
+
+  <!-- stats -->
+  <div class="stats">
+    <div class="stat-card">
+      <div class="label">Vendas hoje</div>
+      <div class="value">{{ orders_today.n or 0 }}</div>
+      <div class="sub">pedidos pagos</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Faturamento hoje</div>
+      <div class="value">R$ {{ "%.2f"|format(orders_today.t or 0)|replace(".", ",") }}</div>
+      <div class="sub">pedidos pagos</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Produtos ativos</div>
+      <div class="value">{{ products | selectattr("active", "eq", 1) | list | length }}</div>
+      <div class="sub">cadastrados</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Estoque baixo</div>
+      <div class="value">{{ products | selectattr("quantity", "le", 5) | selectattr("active", "eq", 1) | list | length }}</div>
+      <div class="sub">produtos com ≤ 5 unid.</div>
+    </div>
+  </div>
+
+  <!-- add product -->
+  <div class="section">
+    <div class="section-header">
+      <h2>➕ Adicionar Produto</h2>
+    </div>
+    <form method="POST" action="/admin/product/add" enctype="multipart/form-data">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Nome</label>
+          <input type="text" name="name" required placeholder="Ex: Coxinha">
+        </div>
+        <div class="form-group">
+          <label>Categoria</label>
+          <select name="category_id" required>
+            {% for cat in categories %}
+            <option value="{{ cat.id }}">{{ cat.icon }} {{ cat.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Preço (R$)</label>
+          <input type="number" name="price" step="0.01" min="0" required placeholder="0,00">
+        </div>
+        <div class="form-group">
+          <label>Quantidade</label>
+          <input type="number" name="quantity" min="0" required placeholder="0">
+        </div>
+        <div class="form-group">
+          <label>Foto</label>
+          <input type="file" name="image" accept="image/*">
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <button type="submit" class="btn btn-primary">Adicionar Produto</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- products list -->
+  <div class="section">
+    <div class="section-header">
+      <h2>📦 Produtos Cadastrados</h2>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>Nome</th>
+          <th>Categoria</th>
+          <th>Preço</th>
+          <th>Estoque</th>
+          <th>Status</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in products %}
+        <tr class="{{ '' if p.active else 'inactive' }}">
+          <td>
+            {% if p.image %}
+              <img class="product-img" src="/static/images/{{ p.image }}" alt="{{ p.name }}">
+            {% else %}
+              <div class="img-placeholder-sm">{{ p.cat_name[0] if p.cat_name else '?' }}</div>
+            {% endif %}
+          </td>
+          <td><strong>{{ p.name }}</strong></td>
+          <td>{{ p.cat_name }}</td>
+          <td>R$ {{ "%.2f"|format(p.price)|replace(".", ",") }}</td>
+          <td class="{{ 'stock-zero' if p.quantity == 0 else 'stock-low' if p.quantity <= 5 else 'stock-ok' }}">
+            {{ p.quantity }}
+          </td>
+          <td>{{ '✅ Ativo' if p.active else '🚫 Inativo' }}</td>
+          <td>
+            <button class="btn btn-sm btn-primary"
+              onclick="openEdit({{ p.id }}, '{{ p.name }}', {{ p.price }}, {{ p.quantity }}, {{ p.category_id }}, {{ p.active }})">
+              Editar
+            </button>
+            <form method="POST" action="/admin/product/{{ p.id }}/delete" style="display:inline"
+                  onsubmit="return confirm('Desativar {{ p.name }}?')">
+              <button type="submit" class="btn btn-sm btn-danger">Desativar</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- settings -->
+  <div class="section">
+    <div class="section-header"><h2>⚙️ Configurações</h2></div>
+    <form method="POST" action="/admin/settings" class="settings-form">
+      <div class="row">
+        <div class="form-group">
+          <label>Nome da Cantina</label>
+          <input type="text" name="store_name" value="{{ store_name }}" placeholder="Cantina da Igreja">
+        </div>
+        <div class="form-group">
+          <label>Nova senha admin</label>
+          <input type="password" name="new_password" placeholder="Deixe em branco para não alterar">
+        </div>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+      </div>
+    </form>
+  </div>
+
+</div>
+
+<!-- edit modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h3>✏️ Editar Produto</h3>
+    <form method="POST" id="editForm" enctype="multipart/form-data">
+      <div class="modal-form-grid">
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Nome</label>
+          <input type="text" name="name" id="editName" required>
+        </div>
+        <div class="form-group">
+          <label>Preço (R$)</label>
+          <input type="number" name="price" id="editPrice" step="0.01" min="0" required>
+        </div>
+        <div class="form-group">
+          <label>Quantidade em Estoque</label>
+          <input type="number" name="quantity" id="editQty" min="0" required>
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Nova Foto (opcional)</label>
+          <input type="file" name="image" accept="image/*">
+        </div>
+        <div class="form-group" style="grid-column:1/-1;flex-direction:row;align-items:center;gap:8px;">
+          <input type="checkbox" name="active" id="editActive" style="width:auto">
+          <label for="editActive" style="text-transform:none;font-size:.9rem;">Produto ativo (visível no kiosk)</label>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn" onclick="closeEdit()">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openEdit(id, name, price, qty, catId, active) {
+  document.getElementById('editForm').action = `/admin/product/${id}/edit`;
+  document.getElementById('editName').value = name;
+  document.getElementById('editPrice').value = price;
+  document.getElementById('editQty').value = qty;
+  document.getElementById('editActive').checked = active === 1;
+  document.getElementById('editModal').classList.add('show');
+}
+function closeEdit() {
+  document.getElementById('editModal').classList.remove('show');
+}
+document.getElementById('editModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('editModal')) closeEdit();
+});
+</script>
+</body>
+</html>

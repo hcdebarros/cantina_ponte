@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Histórico — {{ store_name }}</title>
+<style>
+  :root { --primary:#7c3aed; --green:#10b981; --red:#ef4444; --amber:#f59e0b; --bg:#f3f4f6; --card:#fff; --text:#1f2937; --muted:#6b7280; --border:#e5e7eb; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); }
+  header { background:var(--primary); color:white; padding:14px 24px; display:flex; align-items:center; justify-content:space-between; }
+  header h1 { font-size:1.2rem; }
+  header nav a { color:rgba(255,255,255,.8); text-decoration:none; margin-left:14px; font-size:.85rem; font-weight:600; }
+  header nav a:hover { color:white; }
+  .container { max-width:1100px; margin:0 auto; padding:24px 16px; }
+  .summary { background:var(--card); border-radius:12px; padding:20px; margin-bottom:20px; display:flex; gap:32px; flex-wrap:wrap; box-shadow:0 1px 4px rgba(0,0,0,.07); }
+  .summary .s { display:flex; flex-direction:column; gap:2px; }
+  .summary .s .label { font-size:.75rem; color:var(--muted); text-transform:uppercase; }
+  .summary .s .val { font-size:1.4rem; font-weight:700; color:var(--primary); }
+  table { width:100%; border-collapse:collapse; font-size:.85rem; background:var(--card); border-radius:12px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.07); }
+  th { text-align:left; padding:10px 14px; background:#faf9ff; border-bottom:2px solid var(--border); color:var(--muted); font-size:.73rem; text-transform:uppercase; }
+  td { padding:10px 14px; border-bottom:1px solid var(--border); vertical-align:top; }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:#faf9ff; }
+  .badge { padding:2px 8px; border-radius:99px; font-size:.7rem; font-weight:700; text-transform:uppercase; }
+  .badge-open      { background:#ede9fe; color:var(--primary); }
+  .badge-preparing { background:#fef3c7; color:#92400e; }
+  .badge-completed { background:#d1fae5; color:#065f46; }
+  .badge-cancelled { background:#fee2e2; color:#991b1b; }
+  .items-list { font-size:.8rem; color:var(--muted); line-height:1.7; }
+  .back-btn { display:inline-block; margin-bottom:16px; padding:8px 16px; background:var(--primary); color:white; border-radius:8px; text-decoration:none; font-weight:600; font-size:.85rem; }
+</style>
+</head>
+<body>
+<header>
+  <h1>📋 Histórico de Pedidos — {{ store_name }}</h1>
+  <nav>
+    <a href="/admin">Admin</a>
+    <a href="/caixa">Caixa</a>
+    <a href="/admin/logout">Sair</a>
+  </nav>
+</header>
+<div class="container">
+  <a href="/admin" class="back-btn">← Voltar ao Admin</a>
+
+  {% set concluded = orders | selectattr("status", "eq", "completed") | list %}
+  <div class="summary">
+    <div class="s"><div class="label">Total de pedidos</div><div class="val">{{ orders | length }}</div></div>
+    <div class="s"><div class="label">Concluídos</div><div class="val">{{ concluded | length }}</div></div>
+    <div class="s">
+      <div class="label">Faturamento total</div>
+      <div class="val">R$ {{ "%.2f"|format(concluded | sum(attribute="total"))|replace(".", ",") }}</div>
+    </div>
+    <div class="s"><div class="label">Cancelados</div><div class="val">{{ orders | selectattr("status", "eq", "cancelled") | list | length }}</div></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Cliente</th>
+        <th>Itens</th>
+        <th>Total</th>
+        <th>Status</th>
+        <th>Data / Hora</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for o in orders %}
+      <tr>
+        <td>{{ "%04d" | format(o.id) }}</td>
+        <td><strong>{{ o.customer }}</strong></td>
+        <td>
+          <div class="items-list">
+            {% for it in o.items %}
+            <div>{{ it.quantity }}× {{ it.name }}</div>
+            {% endfor %}
+          </div>
+        </td>
+        <td><strong>R$ {{ "%.2f"|format(o.total)|replace(".", ",") }}</strong></td>
+        <td>
+          <span class="badge badge-{{ o.status }}">
+            {{ {'open':'Em Aberto','preparing':'Em Preparo','completed':'Concluído','cancelled':'Cancelado'}[o.status] }}
+          </span>
+        </td>
+        <td>{{ o.created_at }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+</body>
+</html>
